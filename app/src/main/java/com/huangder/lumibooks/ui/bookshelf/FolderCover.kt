@@ -50,6 +50,10 @@ internal fun FolderCover(
     previewBooks: List<Book?> = List(4) { null },
     modifier: Modifier = Modifier
 ) {
+    // The folder's outer mask already uses the same corner radius as BookGridItem.
+    // Scale the radius for the smaller preview covers, just as a book cover would scale.
+    val previewCornerRadius = cornerRadius * 0.4f
+    val placeholderCornerRadius = cornerRadius * 0.7f
     val coverPath = folder.coverPath
     val hasPreview = coverPath == null && folder.previewBookIds?.isNotEmpty() == true
     var imageLoaded by remember(coverPath) { mutableStateOf(false) }
@@ -70,6 +74,7 @@ internal fun FolderCover(
         if (hasPreview) {
             FolderBookPreview(
                 previewBooks = previewBooks,
+                cornerRadius = previewCornerRadius,
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -77,7 +82,7 @@ internal fun FolderCover(
                 modifier = Modifier
                     .fillMaxWidth(0.62f)
                     .aspectRatio(1f)
-                    .clip(AppRoundedCornerShape(20.dp))
+                    .clip(AppRoundedCornerShape(placeholderCornerRadius))
                     .background(AppColors.Accent.copy(alpha = 0.14f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -135,6 +140,7 @@ internal fun FolderCover(
 @Composable
 private fun FolderBookPreview(
     previewBooks: List<Book?>,
+    cornerRadius: Dp,
     modifier: Modifier = Modifier
 ) {
     val slotBackground = AppColors.BgGray
@@ -160,7 +166,7 @@ private fun FolderBookPreview(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .clip(AppRoundedCornerShape(20.dp))
+                            .clip(AppRoundedCornerShape(cornerRadius))
                             .background(slotBackground),
                         contentAlignment = Alignment.Center
                     ) {
