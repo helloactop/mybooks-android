@@ -2259,7 +2259,7 @@ private fun ReaderScreenContent(
     var dragWatcher by remember { mutableStateOf<SpanWatcher?>(null) }
 
     // TOC 跳转：当 currentChapterIndex 变化且是 TOC 触发时，跳转 ReadView
-    var showToc by remember { mutableStateOf(false) }
+    var showToc by remember(bookId) { mutableStateOf(false) }
     var showThemeSheet by remember { mutableStateOf(false) }
     var showHighlightRules by remember { mutableStateOf(false) }
     var showAdvancedSheet by remember { mutableStateOf(false) }
@@ -2274,7 +2274,7 @@ private fun ReaderScreenContent(
     // 请求关闭状态（用于触发退出动画）
     var requestCloseNotesList by remember { mutableStateOf(false) }
     var requestCloseNoteInput by remember { mutableStateOf(false) }
-    var requestCloseToc by remember { mutableStateOf(false) }
+    var requestCloseToc by remember(bookId) { mutableStateOf(false) }
     var requestCloseTheme by remember { mutableStateOf(false) }
     var requestCloseHighlightRules by remember { mutableStateOf(false) }
     var requestCloseAdvanced by remember { mutableStateOf(false) }
@@ -4269,9 +4269,13 @@ private fun ReaderScreenContent(
             }
 
             if (uiState.isMenuVisible) {
+                // Only the middle tap zone dismisses the toolbar. Side taps still reach
+                // the page-turn handlers, and the toolbar actions remain on top of this zone.
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .align(Alignment.Center)
+                        .fillMaxWidth(1f / 3f)
+                        .fillMaxHeight()
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() },
@@ -4825,7 +4829,12 @@ private fun ReaderScreenContent(
                                 false
                             )
                         } else if (isContinuousScrollMode) {
-                            jumpToContinuousChapter(target.chapterIndex)
+                            // Preserve a TOC fragment's actual text offset in continuous mode.
+                            val fraction = if (entry.anchor.isNullOrBlank()) 0f else {
+                                target.characterOffset.toFloat() /
+                                    viewModel.getChapterTextLength(target.chapterIndex).coerceAtLeast(1)
+                            }
+                            jumpToContinuousChapter(target.chapterIndex, fraction)
                         } else if (isBookLayout) {
                             epubSearchRequest = null
                             epubLocatorRequest = null
@@ -7173,6 +7182,17 @@ internal fun FloatingReaderMenu(
         val railDirection = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
         val bottomReserve = sideRailItemWidth + READER_SIDE_RAIL_EDGE_PADDING + READER_SIDE_RAIL_GAP
         Box(modifier = modifier.fillMaxSize()) {
+            // Dedicated TOC icon at the bottom-left on landscape/tablet layouts.
+            // Do not mount its hit target when the reader menu is hidden.
+            if (visible) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = READER_SIDE_RAIL_EDGE_PADDING, bottom = READER_SIDE_BOTTOM_PADDING)
+                ) {
+                    ReaderTocBottomButton(onCatalogClick, capsuleBgColor, capsuleContentColor, forceSolidCapsules)
+                }
+            }
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -7309,8 +7329,13 @@ internal fun FloatingReaderMenu(
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // A separate TOC icon in the bottom-left, alongside the reader actions.
+            if (visible) {
+                ReaderTocBottomButton(onCatalogClick, capsuleBgColor, capsuleContentColor, forceSolidCapsules)
+            }
             Box(modifier = Modifier.weight(1f).graphicsLayer {
                 alpha = alpha1.value; translationY = offset1.value
                 compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.ModulateAlpha
@@ -7331,6 +7356,25 @@ internal fun FloatingReaderMenu(
             }
         }
     }
+}
+
+@Composable
+private fun ReaderTocBottomButton(
+    onClick: () -> Unit,
+    backgroundColor: Color,
+    contentColor: Color,
+    forceSolid: Boolean
+) {
+    LiquidGlassIconButton(
+        imageVector = AppIcons.List,
+        contentDescription = stringResource(R.string.reader_toc),
+        onClick = onClick,
+        size = 48.dp,
+        iconSize = 22.dp,
+        contentColor = contentColor,
+        normalContainerColor = backgroundColor,
+        forceFallback = forceSolid
+    )
 }
 
 @Composable
@@ -9407,9 +9451,9 @@ private fun TocSheet(
                 .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) { isClosing = true }
         )
 
-        // 底部弹出（70% 屏幕高度）；平板为居中卡片
+        // 底部弹出（80% 屏幕高度）；平板为居中卡片
         LiquidGlassColumnSheetContainer(
-            modifier = adaptiveSheetFrame(heightFraction = 0.7f)
+            modifier = adaptiveSheetFrame(heightFraction = 0.8f)
                 .materialBottomSheetMotion(sheetOffset.value, predictiveBackProgress),
             contentModifier = Modifier
                 .fillMaxSize()
