@@ -2932,15 +2932,33 @@ private fun PdfBottomMenu(
                 onProgressDragEnd = onCatalogProgressDragEnd
             )
         }
-        RasterReaderActionRow(
-            isComic = isComic,
-            onAnnotationClick = onAnnotationClick,
-            onNotesClick = onNotesClick,
-            onBookmarksClick = onBookmarksClick,
-            onImageAdjustmentsClick = onImageAdjustmentsClick,
-            onConversionClick = onConversionClick,
-            glassContentScrimColor = glassContentScrimColor
-        )
+        // Match the text reader: a dedicated TOC icon at the bottom-left.
+        // The existing catalog progress capsule keeps its drag-to-seek behavior.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LiquidGlassIconButton(
+                imageVector = AppIcons.List,
+                contentDescription = stringResource(R.string.reader_toc),
+                onClick = onCatalogClick,
+                size = 48.dp,
+                iconSize = 22.dp,
+                contentColor = AppColors.TextPrimary,
+                normalContainerColor = AppColors.BgGray
+            )
+            RasterReaderActionRow(
+                isComic = isComic,
+                onAnnotationClick = onAnnotationClick,
+                onNotesClick = onNotesClick,
+                onBookmarksClick = onBookmarksClick,
+                onImageAdjustmentsClick = onImageAdjustmentsClick,
+                onConversionClick = onConversionClick,
+                glassContentScrimColor = glassContentScrimColor,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
